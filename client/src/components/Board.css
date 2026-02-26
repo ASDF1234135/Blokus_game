@@ -1,0 +1,34 @@
+.board {
+  display: grid;
+  grid-template-columns: repeat(20, var(--cell-size));
+  grid-template-rows: repeat(20, var(--cell-size));
+  border: 2px solid #333;
+}
+
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  background-color: #eee;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+}
+
+.cell.preview {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.cell.red {
+  background-color: #ff0000;
+}
+
+.cell.blue {
+  background-color: #0000ff;
+}
+
+.cell.green {
+  background-color: #00ff00;
+}
+
+.cell.yellow {
+  background-color: #ffff00;
+}

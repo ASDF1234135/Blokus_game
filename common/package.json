@@ -1,0 +1,22 @@
+{
+  "name": "@game1000/common",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/values.d.ts",
+      "import": "./dist/values.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "npm run clean && tsc",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.1.3",
+    "typescript": "^5.9.3"
+  }
+}

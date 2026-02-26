@@ -1,0 +1,73 @@
+.game-over-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 1rem;
+  color: #333;
+}
+
+.ranking-list {
+  list-style-type: none;
+  padding: 0;
+  width: 80%;
+  max-width: 500px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ranking-list li {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  gap: 1rem;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #eee;
+}
+
+.ranking-list li:last-child {
+  border-bottom: none;
+}
+
+.ranking-list .current-player {
+  background-color: #e0f7fa;
+  font-weight: bold;
+}
+
+.rank {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #666;
+  width: 30px;
+}
+
+.player-color {
+  flex-grow: 1;
+}
+
+.score {
+  font-weight: bold;
+}
+
+.play-again-status {
+  font-style: italic;
+  color: #27ae60;
+}
+
+.remaining {
+  font-size: 0.9rem;
+  color: #888;
+}
+
+.game-over-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.game-over-actions button {
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+}

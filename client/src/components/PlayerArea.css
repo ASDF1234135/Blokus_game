@@ -1,0 +1,48 @@
+.player-area {
+  border: 2px solid #ccc;
+  padding: 0.5rem;
+  margin: 0.5rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.player-area.current-turn {
+  border-color: #3498db;
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+
+.pieces-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 240px; /* Or other max-width as you see fit */
+}
+
+.piece-container {
+  padding: 5px;
+  border: 1px solid transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.piece-container.selectable {
+  cursor: pointer;
+  transition: transform 0.1s ease-in-out;
+}
+
+.piece-container.selectable:hover {
+  transform: scale(1.1);
+  background-color: #f0f0f0;
+  border-radius: 4px;
+}
+
+.no-moves-notice {
+  color: #992c12;
+  background-color: #fbeae5;
+  font-weight: bold;
+  padding: 10px;
+  border: 1px solid #c0392b;
+  border-radius: 4px;
+  margin: 10px 0;
+  text-align: center;
+}

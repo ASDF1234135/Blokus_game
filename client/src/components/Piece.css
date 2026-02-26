@@ -1,0 +1,14 @@
+.piece {
+  display: grid;
+  cursor: pointer;
+}
+
+.piece-cell {
+  box-sizing: border-box;
+  border: 1px solid #fff; /* For contrast between cells */
+}
+
+.preview-piece .piece,
+.preview-piece .piece-cell {
+  pointer-events: none;
+}

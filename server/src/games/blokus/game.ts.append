@@ -1,0 +1,53 @@
+// Additional content for /mnt/c/Users/User/game1000/server/src/games/blokus/game.ts
+
+function canPlace(
+  board: (PlayerColor | null)[][],
+  playerColor: PlayerColor,
+  piece: Piece
+): boolean {
+  for (let y = 0; y < 20; y++) {
+    for (let x = 0; x < 20; x++) {
+      for (let rotation of [0, 90, 180, 270] as const) {
+        for (let isFlipped of [true, false]) {
+          const placedPiece: PlacedPiece = {
+            piece: 'I1', // a bit of a hack, we don't know the piece name here
+            x,
+            y,
+            rotation,
+            isFlipped,
+          };
+
+          // We need a lightweight validation function that doesn't depend on the full game state
+          if (isValidPlacement(board, playerColor, piece, placedPiece)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// This is a simplified version of the validation logic in placePiece
+function isValidPlacement(
+  board: (PlayerColor | null)[][],
+  playerColor: PlayerColor,
+  piece: Piece,
+  placedPiece: PlacedPiece
+): boolean {
+  // Logic to check if the placement is valid, similar to placePiece
+  // This is a complex function and will be implemented in a future step
+  return true;
+}
+
+export function isGameOver(state: GameState): boolean {
+  for (const player of state.players) {
+    for (const pieceName of player.pieces) {
+      const piece = pieces[pieceName];
+      if (canPlace(state.board, player.color, piece)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
