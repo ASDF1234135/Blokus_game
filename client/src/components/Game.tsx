@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket';
 import { pieces } from '@game1000/common';
-import type { GameState, PlacedPiece, Player } from '@game1000/common/types';
+import type { GameState, PlacedPiece, ColorState } from '@game1000/common/types';
 import { Board } from './Board';
 import { PlayerArea } from './PlayerArea';
 import { PreviewPiece } from './PreviewPiece';
@@ -17,7 +17,7 @@ interface GameProps {
   gameState: GameState;
 }
 
-export const Game = ({ gameId, playerId, gameState }: GameProps) => {
+export const Game = ({ playerId, gameState }: GameProps) => {
   const [selectedPiece, setSelectedPiece] = useState<keyof typeof pieces | null>(null);
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -28,8 +28,16 @@ export const Game = ({ gameId, playerId, gameState }: GameProps) => {
   const [showNoMovesModal, setShowNoMovesModal] = useState(false);
   const [cellSize, setCellSize] = useState(30);
 
-  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const isMyTurn = currentPlayer.id === playerId;
+  const currentColor = gameState.colors[gameState.currentPlayerIndex];
+  
+  let isMyTurn = false;
+  if (currentColor) {
+    if (gameState.gameType === '3-player' && currentColor.playerId === 'shared') {
+        isMyTurn = gameState.players[gameState.sharedColorPlayerIndex!].id === playerId;
+    } else {
+        isMyTurn = currentColor.playerId === playerId;
+    }
+  }
   
   useEffect(() => {
     const updateCellSize = () => {
@@ -43,20 +51,23 @@ export const Game = ({ gameId, playerId, gameState }: GameProps) => {
   }, []);
 
   useEffect(() => {
-    if (isMyTurn) {
-      const me = gameState.players.find(p => p.id === playerId);
-      if (me) {
-        let hasMove = false;
-        for (const pieceName of me.pieces) {
-          if (canPlace(gameState.board, me.color, pieces[pieceName])) {
-            hasMove = true;
-            break;
-          }
+    if (!isMyTurn) {
+        setSelectedPiece(null);
+    }
+  }, [isMyTurn]);
+
+  useEffect(() => {
+    if (isMyTurn && currentColor) {
+      let hasMove = false;
+      for (const pieceName of currentColor.pieces) {
+        if (canPlace(gameState.board, currentColor.color, pieces[pieceName])) {
+          hasMove = true;
+          break;
         }
-        setCanMove(hasMove);
-        if (!hasMove) {
-          setShowNoMovesModal(true);
-        }
+      }
+      setCanMove(hasMove);
+      if (!hasMove) {
+        setShowNoMovesModal(true);
       }
     } else {
       setCanMove(true);
@@ -73,7 +84,7 @@ export const Game = ({ gameId, playerId, gameState }: GameProps) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [gameState, playerId, isMyTurn]);
+  }, [gameState, playerId, isMyTurn, currentColor]);
 
   const handlePlacePiece = (x: number, y: number) => {
     if (selectedPiece && isMyTurn && canMove) {
@@ -95,6 +106,10 @@ export const Game = ({ gameId, playerId, gameState }: GameProps) => {
   if (gameState.status === 'finished') {
     return <GameOver gameState={gameState} playerId={playerId} />;
   }
+  
+  if (!currentColor) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="game-container">
@@ -109,17 +124,17 @@ export const Game = ({ gameId, playerId, gameState }: GameProps) => {
       {selectedPiece && showPreview && <PreviewPiece pieceName={selectedPiece} rotation={rotation} isFlipped={isFlipped} mouseX={previewX} mouseY={previewY} cellSize={cellSize} />}
       
       <div className="player-column-left">
-        {[gameState.players[0], gameState.players[2]].map((player: Player) => 
-          player && (
+        {[gameState.colors[0], gameState.colors[2]].map((colorState: ColorState) => 
+          colorState && (
             <PlayerArea
-              key={player.id}
-              player={player}
+              key={colorState.color}
+              colorState={colorState}
               onPieceClick={(piece) => {
-                if (isMyTurn && canMove && player.id === playerId) {
+                if (isMyTurn && canMove && colorState.color === currentColor.color) {
                   setSelectedPiece(piece);
                 }
               }}
-              isCurrentPlayer={player.id === currentPlayer.id}
+              isCurrentPlayer={colorState.color === currentColor.color}
               canMove={canMove}
               cellSize={cellSize}
             />
@@ -130,38 +145,35 @@ export const Game = ({ gameId, playerId, gameState }: GameProps) => {
       <div className="board-container">
         <div className="game-info">
           <h1>Blokus</h1>
-          <h3>Current Player: <span style={{ color: currentPlayer.color }}>{currentPlayer.color.toUpperCase()}</span> ({isMyTurn ? 'You' : ''})</h3>
+          <h3>Current Player: <span style={{ color: currentColor.color }}>{currentColor.color.toUpperCase()}</span> ({isMyTurn ? 'You' : ''})</h3>
           {isMyTurn && <button onClick={handlePassTurn}>Pass Turn</button>}
           <p className="controls-hint">Press 'R' to rotate, 'F' to flip</p>
         </div>
         <Board
           gameState={gameState}
           onCellClick={handlePlacePiece}
-          onCellMouseEnter={(x, y, top, left) => {
+          onCellMouseEnter={(_x, _y, top, left) => {
             setPreviewX(left);
             setPreviewY(top);
             setShowPreview(true);
           }}
           onCellMouseLeave={() => setShowPreview(false)}
-          selectedPiece={selectedPiece}
-          rotation={rotation}
-          isFlipped={isFlipped}
           cellSize={cellSize}
         />
       </div>
 
       <div className="player-column-right">
-        {[gameState.players[1], gameState.players[3]].map((player: Player) => 
-          player && (
+        {[gameState.colors[1], gameState.colors[3]].map((colorState: ColorState) => 
+          colorState && (
             <PlayerArea
-              key={player.id}
-              player={player}
+              key={colorState.color}
+              colorState={colorState}
               onPieceClick={(piece) => {
-                if (isMyTurn && canMove && player.id === playerId) {
+                if (isMyTurn && canMove && colorState.color === currentColor.color) {
                   setSelectedPiece(piece);
                 }
               }}
-              isCurrentPlayer={player.id === currentPlayer.id}
+              isCurrentPlayer={colorState.color === currentColor.color}
               canMove={canMove}
               cellSize={cellSize}
             />

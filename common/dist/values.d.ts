@@ -1,23 +1,4 @@
+import type { Piece } from './types.js';
 export declare const pieces: {
-    I1: number[][];
-    I2: number[][];
-    I3: number[][];
-    V3: number[][];
-    I4: number[][];
-    L4: number[][];
-    N4: number[][];
-    O4: number[][];
-    T4: number[][];
-    F5: number[][];
-    I5: number[][];
-    L5: number[][];
-    N5: number[][];
-    P5: number[][];
-    T5: number[][];
-    U5: number[][];
-    V5: number[][];
-    W5: number[][];
-    X5: number[][];
-    Y5: number[][];
-    Z5: number[][];
+    [key: string]: Piece;
 };

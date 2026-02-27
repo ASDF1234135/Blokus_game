@@ -1,5 +1,4 @@
-import { pieces } from '@game1000/common';
-import type { PlayerColor, GameState, PlacedPiece, Piece } from '@game1000/common/types';
+import type { PlayerColor, PlacedPiece, Piece } from '@game1000/common/types';
 
 // This file contains client-side duplicates of the server's game logic.
 // In a production-grade application, this logic would be shared in a way

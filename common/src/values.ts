@@ -1,7 +1,9 @@
+import type { Piece } from './types.js';
+
 // All 21 unique Blokus pieces, represented as 2D arrays.
 // The origin of each piece is at the top-left corner of its bounding box.
 
-export const pieces = {
+export const pieces: { [key: string]: Piece } = {
   // 1-square piece
   I1: [[1]],
 
@@ -33,3 +35,4 @@ export const pieces = {
   Y5: [[0, 1, 0, 0], [1, 1, 1, 1]],
   Z5: [[1, 1, 0], [0, 1, 0], [0, 1, 1]],
 };
+

@@ -23,17 +23,17 @@ export const PreviewPiece = ({
   const pieceShape = pieces[pieceName];
 
   function rotate(piece: PieceType): PieceType {
-    let rotated = piece;
+    let rotated: PieceType = piece;
     for (let i = 0; i < rotation / 90; i++) {
       rotated = rotated[0].map((_, colIndex) =>
-        rotated.map((row: number[]) => row[colIndex]).reverse()
+        rotated.map((row) => row[colIndex]).reverse()
       );
     }
     return rotated;
   }
 
   function flip(piece: PieceType): PieceType {
-    return piece.map((row: number[]) => row.slice().reverse());
+    return piece.map((row) => row.slice().reverse());
   }
 
   let finalPiece = isFlipped ? flip(pieceShape) : pieceShape;

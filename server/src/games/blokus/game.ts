@@ -1,5 +1,5 @@
 import { pieces } from '@game1000/common';
-import type { PlayerColor, Player, GameState, PlacedPiece, Piece } from '@game1000/common/types';
+import type { PlayerColor, Player, GameState, PlacedPiece, Piece, ColorState, GameType } from '@game1000/common/types';
 
 function rotate(piece: Piece, rotation: 0 | 90 | 180 | 270): Piece {
     if (rotation === 0) return piece;
@@ -91,10 +91,10 @@ export function isValidPlacement(board: (PlayerColor | null)[][], playerColor: P
 }
 
 export function isGameOver(state: GameState): boolean {
-    for (const player of state.players) {
-        for (const pieceName of player.pieces) {
+    for (const colorState of state.colors) {
+        for (const pieceName of colorState.pieces) {
             const piece = pieces[pieceName] as Piece;
-            if (canPlace(state.board, player.color, piece)) {
+            if (canPlace(state.board, colorState.color, piece)) {
                 return false;
             }
         }
@@ -102,31 +102,31 @@ export function isGameOver(state: GameState): boolean {
     return true;
 }
 
-export function createInitialState(): GameState {
+export function createInitialState(gameType: GameType): GameState {
     return {
         board: Array(20).fill(null).map(() => Array(20).fill(null)),
         players: [],
+        colors: [],
         currentPlayerIndex: 0,
         status: 'lobby',
+        gameType,
     };
 }
 
 export function addPlayer(state: GameState, playerId: string): GameState {
-    if (state.players.length >= 4) return state;
-    const colors: PlayerColor[] = ['blue', 'yellow', 'red', 'green'];
+    const maxPlayers = state.gameType === '2-player' ? 2 : state.gameType === '3-player' ? 3 : 4;
+    if (state.players.length >= maxPlayers) return state;
+
     const newPlayer: Player = {
         id: playerId,
-        color: colors[state.players.length],
-        pieces: Object.keys(pieces) as (keyof typeof pieces)[],
-        score: 0,
         isReady: false,
         wantsToPlayAgain: false,
     };
     return { ...state, players: [...state.players, newPlayer] };
 }
 
-export function getCurrentPlayer(state: GameState): Player | undefined {
-    return state.players[state.currentPlayerIndex];
+export function getCurrentColorState(state: GameState): ColorState | undefined {
+    return state.colors[state.currentPlayerIndex];
 }
 
 export function setPlayerReady(state: GameState, playerId: string, isReady: boolean): GameState {
@@ -134,19 +134,60 @@ export function setPlayerReady(state: GameState, playerId: string, isReady: bool
 }
 
 export function startGame(state: GameState, playerId: string): GameState {
-    if (state.players[0]?.id !== playerId || state.players.length < 2 || state.players.some(p => !p.isReady)) return state;
-    return { ...state, status: 'in-progress' };
+    const minPlayers = state.gameType === '2-player' ? 2 : state.gameType === '3-player' ? 3 : 4;
+    if (state.players[0]?.id !== playerId || state.players.length < minPlayers || state.players.some(p => !p.isReady)) return state;
+
+    const colors: PlayerColor[] = ['blue', 'yellow', 'red', 'green'];
+    let colorStates: ColorState[] = [];
+
+    if (state.gameType === '4-player') {
+        colorStates = state.players.map((player, index) => ({
+            color: colors[index],
+            playerId: player.id,
+            pieces: Object.keys(pieces) as (keyof typeof pieces)[],
+            score: 0,
+        }));
+    } else if (state.gameType === '3-player') {
+        colorStates = state.players.map((player, index) => ({
+            color: colors[index],
+            playerId: player.id,
+            pieces: Object.keys(pieces) as (keyof typeof pieces)[],
+            score: 0,
+        }));
+        colorStates.push({
+            color: 'green',
+            playerId: 'shared',
+            pieces: Object.keys(pieces) as (keyof typeof pieces)[],
+            score: 0,
+        });
+    } else if (state.gameType === '2-player') {
+        colorStates = [
+            { color: 'blue', playerId: state.players[0].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
+            { color: 'yellow', playerId: state.players[1].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
+            { color: 'red', playerId: state.players[0].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
+            { color: 'green', playerId: state.players[1].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
+        ];
+    }
+    
+    return { ...state, status: 'in-progress', colors: colorStates, sharedColorPlayerIndex: 0 };
 }
 
 export function placePiece(state: GameState, playerId: string, placedPiece: PlacedPiece): GameState {
-    const currentPlayer = getCurrentPlayer(state);
-    if (!currentPlayer || currentPlayer.id !== playerId) return state;
+    const currentColor = getCurrentColorState(state);
+    if (!currentColor) return state;
+
+    if (currentColor.playerId === 'shared') {
+        const sharedPlayer = state.players[state.sharedColorPlayerIndex!];
+        if (sharedPlayer.id !== playerId) return state;
+    } else {
+        if (currentColor.playerId !== playerId) return state;
+    }
 
     const pieceName = placedPiece.piece;
     const pieceShape = pieces[pieceName] as Piece;
-    if (!currentPlayer.pieces.includes(pieceName)) return state;
+    if (!currentColor.pieces.includes(pieceName)) return state;
 
-    if (!isValidPlacement(state.board, currentPlayer.color, pieceShape, placedPiece)) return state;
+    if (!isValidPlacement(state.board, currentColor.color, pieceShape, placedPiece)) return state;
 
     const newBoard = state.board.map(row => row.slice());
     const finalPiece = rotate(placedPiece.isFlipped ? flip(pieceShape) : pieceShape, placedPiece.rotation);
@@ -155,30 +196,50 @@ export function placePiece(state: GameState, playerId: string, placedPiece: Plac
     for (let row = 0; row < finalPiece.length; row++) {
         for (let col = 0; col < finalPiece[row].length; col++) {
             if (finalPiece[row][col] === 1) {
-                newBoard[placedPiece.y + row][placedPiece.x + col] = currentPlayer.color;
+                newBoard[placedPiece.y + row][placedPiece.x + col] = currentColor.color;
                 pieceSquareCount++;
             }
         }
     }
 
-    const newPlayers = state.players.map(p => {
-        if (p.id === playerId) {
+    const newColors = state.colors.map(c => {
+        if (c.color === currentColor.color) {
             return {
-                ...p,
-                pieces: p.pieces.filter(pName => pName !== pieceName),
-                score: p.score + pieceSquareCount,
+                ...c,
+                pieces: c.pieces.filter(pName => pName !== pieceName),
+                score: c.score + pieceSquareCount,
             };
         }
-        return p;
+        return c;
     });
+    
+    const nextState = { ...state, board: newBoard, colors: newColors, currentPlayerIndex: (state.currentPlayerIndex + 1) % state.colors.length };
 
-    return { ...state, board: newBoard, players: newPlayers, currentPlayerIndex: (state.currentPlayerIndex + 1) % state.players.length };
+    if (state.gameType === '3-player' && getCurrentColorState(nextState)?.playerId === 'shared') {
+        nextState.sharedColorPlayerIndex = (state.sharedColorPlayerIndex! + 1) % 3;
+    }
+
+    return nextState;
 }
 
 export function passTurn(state: GameState, playerId: string): GameState {
-    const currentPlayer = getCurrentPlayer(state);
-    if (!currentPlayer || currentPlayer.id !== playerId) return state;
-    return { ...state, currentPlayerIndex: (state.currentPlayerIndex + 1) % state.players.length };
+    const currentColor = getCurrentColorState(state);
+    if (!currentColor) return state;
+
+    if (currentColor.playerId === 'shared') {
+        const sharedPlayer = state.players[state.sharedColorPlayerIndex!];
+        if (sharedPlayer.id !== playerId) return state;
+    } else {
+        if (currentColor.playerId !== playerId) return state;
+    }
+
+    const nextState = { ...state, currentPlayerIndex: (state.currentPlayerIndex + 1) % state.colors.length };
+
+    if (state.gameType === '3-player' && getCurrentColorState(nextState)?.playerId === 'shared') {
+        nextState.sharedColorPlayerIndex = (state.sharedColorPlayerIndex! + 1) % 3;
+    }
+    
+    return nextState;
 }
 
 export function setWantsToPlayAgain(state: GameState, playerId: string): GameState {
@@ -190,7 +251,7 @@ export function setWantsToPlayAgain(state: GameState, playerId: string): GameSta
 
 export function resetGame(state: GameState): GameState {
     if (state.players.every(p => p.wantsToPlayAgain)) {
-        const freshState = createInitialState();
+        const freshState = createInitialState(state.gameType);
         // Re-add players in the same order
         let intermediateState = freshState;
         for (const player of state.players) {

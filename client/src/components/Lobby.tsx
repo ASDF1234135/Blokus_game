@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { socket } from '../socket';
-import type { GameState } from '@game1000/common/types';
+import type { GameState, GameType } from '@game1000/common/types';
 import './Lobby.css';
 
 interface LobbyProps {
@@ -11,9 +11,10 @@ interface LobbyProps {
 
 export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) => {
   const [joinGameId, setJoinGameId] = useState('');
+  const [gameType, setGameType] = useState<GameType>('4-player');
 
   const handleCreateGame = () => {
-    socket.emit('createGame');
+    socket.emit('createGame', gameType);
   };
 
   const handleJoinGame = () => {
@@ -36,7 +37,8 @@ export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) =
   if (gameIdProp && gameState) {
     const me = gameState.players.find(p => p.id === playerId);
     const isGameCreator = gameState.players[0]?.id === playerId;
-    const allReady = gameState.players.length > 1 && gameState.players.every(p => p.isReady);
+    const minPlayers = gameState.gameType === '2-player' ? 2 : gameState.gameType === '3-player' ? 3 : 4;
+    const allReady = gameState.players.length >= minPlayers && gameState.players.every(p => p.isReady);
 
     return (
       <div className="lobby-container">
@@ -49,10 +51,10 @@ export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) =
               Copy
             </button>
           </div>
-          <h3>Players:</h3>
+          <h3>Players: ({gameState.players.length}/{gameState.gameType === '2-player' ? 2 : gameState.gameType === '3-player' ? 3 : 4})</h3>
           <ul className="player-list">
             {gameState.players.map(p => (
-              <li key={p.id} style={{ color: p.color }}>
+              <li key={p.id}>
                 {p.id === playerId ? 'You' : p.id} - {p.isReady ? 'Ready' : 'Not Ready'}
               </li>
             ))}
@@ -76,6 +78,12 @@ export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) =
     <div className="lobby-container">
       <h1>Blokus Online</h1>
       <div className="lobby-actions">
+        <div>
+          <h2>Select Number of Players</h2>
+          <button className={gameType === '2-player' ? 'active' : ''} onClick={() => setGameType('2-player')}>2 Players</button>
+          <button className={gameType === '3-player' ? 'active' : ''} onClick={() => setGameType('3-player')}>3 Players</button>
+          <button className={gameType === '4-player' ? 'active' : ''} onClick={() => setGameType('4-player')}>4 Players</button>
+        </div>
         <button onClick={handleCreateGame}>Create New Game</button>
         <div className="join-game">
           <input

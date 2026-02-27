@@ -78,59 +78,101 @@ export function isValidPlacement(board, playerColor, piece, placedPiece) {
     return touchesCorner;
 }
 export function isGameOver(state) {
-    for (const player of state.players) {
-        for (const pieceName of player.pieces) {
+    for (const colorState of state.colors) {
+        for (const pieceName of colorState.pieces) {
             const piece = pieces[pieceName];
-            if (canPlace(state.board, player.color, piece)) {
+            if (canPlace(state.board, colorState.color, piece)) {
                 return false;
             }
         }
     }
     return true;
 }
-export function createInitialState() {
+export function createInitialState(gameType) {
     return {
         board: Array(20).fill(null).map(() => Array(20).fill(null)),
         players: [],
+        colors: [],
         currentPlayerIndex: 0,
         status: 'lobby',
+        gameType,
     };
 }
 export function addPlayer(state, playerId) {
-    if (state.players.length >= 4)
+    const maxPlayers = state.gameType === '2-player' ? 2 : state.gameType === '3-player' ? 3 : 4;
+    if (state.players.length >= maxPlayers)
         return state;
-    const colors = ['blue', 'yellow', 'red', 'green'];
     const newPlayer = {
         id: playerId,
-        color: colors[state.players.length],
-        pieces: Object.keys(pieces),
-        score: 0,
         isReady: false,
         wantsToPlayAgain: false,
     };
     return Object.assign(Object.assign({}, state), { players: [...state.players, newPlayer] });
 }
-export function getCurrentPlayer(state) {
-    return state.players[state.currentPlayerIndex];
+export function getCurrentColorState(state) {
+    return state.colors[state.currentPlayerIndex];
 }
 export function setPlayerReady(state, playerId, isReady) {
     return Object.assign(Object.assign({}, state), { players: state.players.map(p => p.id === playerId ? Object.assign(Object.assign({}, p), { isReady }) : p) });
 }
 export function startGame(state, playerId) {
     var _a;
-    if (((_a = state.players[0]) === null || _a === void 0 ? void 0 : _a.id) !== playerId || state.players.length < 2 || state.players.some(p => !p.isReady))
+    const minPlayers = state.gameType === '2-player' ? 2 : state.gameType === '3-player' ? 3 : 4;
+    if (((_a = state.players[0]) === null || _a === void 0 ? void 0 : _a.id) !== playerId || state.players.length < minPlayers || state.players.some(p => !p.isReady))
         return state;
-    return Object.assign(Object.assign({}, state), { status: 'in-progress' });
+    const colors = ['blue', 'yellow', 'red', 'green'];
+    let colorStates = [];
+    if (state.gameType === '4-player') {
+        colorStates = state.players.map((player, index) => ({
+            color: colors[index],
+            playerId: player.id,
+            pieces: Object.keys(pieces),
+            score: 0,
+        }));
+    }
+    else if (state.gameType === '3-player') {
+        colorStates = state.players.map((player, index) => ({
+            color: colors[index],
+            playerId: player.id,
+            pieces: Object.keys(pieces),
+            score: 0,
+        }));
+        colorStates.push({
+            color: 'green',
+            playerId: 'shared',
+            pieces: Object.keys(pieces),
+            score: 0,
+        });
+    }
+    else if (state.gameType === '2-player') {
+        colorStates = [
+            { color: 'blue', playerId: state.players[0].id, pieces: Object.keys(pieces), score: 0 },
+            { color: 'yellow', playerId: state.players[1].id, pieces: Object.keys(pieces), score: 0 },
+            { color: 'red', playerId: state.players[0].id, pieces: Object.keys(pieces), score: 0 },
+            { color: 'green', playerId: state.players[1].id, pieces: Object.keys(pieces), score: 0 },
+        ];
+    }
+    return Object.assign(Object.assign({}, state), { status: 'in-progress', colors: colorStates, sharedColorPlayerIndex: 0 });
 }
 export function placePiece(state, playerId, placedPiece) {
-    const currentPlayer = getCurrentPlayer(state);
-    if (!currentPlayer || currentPlayer.id !== playerId)
+    var _a;
+    const currentColor = getCurrentColorState(state);
+    if (!currentColor)
         return state;
+    if (currentColor.playerId === 'shared') {
+        const sharedPlayer = state.players[state.sharedColorPlayerIndex];
+        if (sharedPlayer.id !== playerId)
+            return state;
+    }
+    else {
+        if (currentColor.playerId !== playerId)
+            return state;
+    }
     const pieceName = placedPiece.piece;
     const pieceShape = pieces[pieceName];
-    if (!currentPlayer.pieces.includes(pieceName))
+    if (!currentColor.pieces.includes(pieceName))
         return state;
-    if (!isValidPlacement(state.board, currentPlayer.color, pieceShape, placedPiece))
+    if (!isValidPlacement(state.board, currentColor.color, pieceShape, placedPiece))
         return state;
     const newBoard = state.board.map(row => row.slice());
     const finalPiece = rotate(placedPiece.isFlipped ? flip(pieceShape) : pieceShape, placedPiece.rotation);
@@ -138,31 +180,49 @@ export function placePiece(state, playerId, placedPiece) {
     for (let row = 0; row < finalPiece.length; row++) {
         for (let col = 0; col < finalPiece[row].length; col++) {
             if (finalPiece[row][col] === 1) {
-                newBoard[placedPiece.y + row][placedPiece.x + col] = currentPlayer.color;
+                newBoard[placedPiece.y + row][placedPiece.x + col] = currentColor.color;
                 pieceSquareCount++;
             }
         }
     }
-    const newPlayers = state.players.map(p => {
-        if (p.id === playerId) {
-            return Object.assign(Object.assign({}, p), { pieces: p.pieces.filter(pName => pName !== pieceName), score: p.score + pieceSquareCount });
+    const newColors = state.colors.map(c => {
+        if (c.color === currentColor.color) {
+            return Object.assign(Object.assign({}, c), { pieces: c.pieces.filter(pName => pName !== pieceName), score: c.score + pieceSquareCount });
         }
-        return p;
+        return c;
     });
-    return Object.assign(Object.assign({}, state), { board: newBoard, players: newPlayers, currentPlayerIndex: (state.currentPlayerIndex + 1) % state.players.length });
+    const nextState = Object.assign(Object.assign({}, state), { board: newBoard, colors: newColors, currentPlayerIndex: (state.currentPlayerIndex + 1) % state.colors.length });
+    if (state.gameType === '3-player' && ((_a = getCurrentColorState(nextState)) === null || _a === void 0 ? void 0 : _a.playerId) === 'shared') {
+        nextState.sharedColorPlayerIndex = (state.sharedColorPlayerIndex + 1) % 3;
+    }
+    return nextState;
 }
 export function passTurn(state, playerId) {
-    const currentPlayer = getCurrentPlayer(state);
-    if (!currentPlayer || currentPlayer.id !== playerId)
+    var _a;
+    const currentColor = getCurrentColorState(state);
+    if (!currentColor)
         return state;
-    return Object.assign(Object.assign({}, state), { currentPlayerIndex: (state.currentPlayerIndex + 1) % state.players.length });
+    if (currentColor.playerId === 'shared') {
+        const sharedPlayer = state.players[state.sharedColorPlayerIndex];
+        if (sharedPlayer.id !== playerId)
+            return state;
+    }
+    else {
+        if (currentColor.playerId !== playerId)
+            return state;
+    }
+    const nextState = Object.assign(Object.assign({}, state), { currentPlayerIndex: (state.currentPlayerIndex + 1) % state.colors.length });
+    if (state.gameType === '3-player' && ((_a = getCurrentColorState(nextState)) === null || _a === void 0 ? void 0 : _a.playerId) === 'shared') {
+        nextState.sharedColorPlayerIndex = (state.sharedColorPlayerIndex + 1) % 3;
+    }
+    return nextState;
 }
 export function setWantsToPlayAgain(state, playerId) {
     return Object.assign(Object.assign({}, state), { players: state.players.map(p => p.id === playerId ? Object.assign(Object.assign({}, p), { wantsToPlayAgain: true }) : p) });
 }
 export function resetGame(state) {
     if (state.players.every(p => p.wantsToPlayAgain)) {
-        const freshState = createInitialState();
+        const freshState = createInitialState(state.gameType);
         // Re-add players in the same order
         let intermediateState = freshState;
         for (const player of state.players) {

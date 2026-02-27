@@ -9,7 +9,7 @@ export class GameManager {
     }
     handleConnection(socket) {
         console.log(`User connected: ${socket.id}`);
-        socket.on('createGame', () => this.createGame(socket));
+        socket.on('createGame', (gameType) => this.createGame(socket, gameType));
         socket.on('joinGame', (gameId) => this.joinGame(socket, gameId));
         socket.on('playerReady', (isReady) => this.handlePlayerReady(socket, isReady));
         socket.on('startGame', () => this.handleStartGame(socket));
@@ -18,15 +18,16 @@ export class GameManager {
         socket.on('playAgainRequest', () => this.handlePlayAgainRequest(socket));
         socket.on('disconnect', () => this.handleDisconnect(socket));
     }
-    createGame(socket) {
+    createGame(socket, gameType) {
         const gameId = Math.random().toString(36).substring(2, 7);
-        const gameState = createInitialState();
+        const gameState = createInitialState(gameType);
         games.set(gameId, gameState);
         this.joinGame(socket, gameId);
     }
     joinGame(socket, gameId) {
         const gameState = games.get(gameId);
-        if (!gameState || gameState.status !== 'lobby' || gameState.players.length >= 4) {
+        const maxPlayers = (gameState === null || gameState === void 0 ? void 0 : gameState.gameType) === '2-player' ? 2 : (gameState === null || gameState === void 0 ? void 0 : gameState.gameType) === '3-player' ? 3 : 4;
+        if (!gameState || gameState.status !== 'lobby' || gameState.players.length >= maxPlayers) {
             socket.emit('error', 'Game is full, in progress, or does not exist.');
             return;
         }
@@ -89,16 +90,17 @@ export class GameManager {
     }
     updateGameState(gameId, gameState) {
         if (gameState.status === 'in-progress' && isGameOver(gameState)) {
-            const finalState = Object.assign(Object.assign({}, gameState), { status: 'finished', players: gameState.players.map((p) => {
-                    let score = 0;
-                    for (const pieceName of p.pieces) {
-                        score -= pieces[pieceName].flat().reduce((sum, cell) => sum + cell, 0);
-                    }
-                    if (p.pieces.length === 0) {
-                        score += 15;
-                    }
-                    return Object.assign(Object.assign({}, p), { score });
-                }) });
+            const newColors = gameState.colors.map((c) => {
+                let score = 0;
+                for (const pieceName of c.pieces) {
+                    score -= pieces[pieceName].flat().reduce((sum, cell) => sum + cell, 0);
+                }
+                if (c.pieces.length === 0) {
+                    score += 15;
+                }
+                return Object.assign(Object.assign({}, c), { score });
+            });
+            const finalState = Object.assign(Object.assign({}, gameState), { status: 'finished', colors: newColors });
             games.set(gameId, finalState);
             this.io.to(gameId).emit('gameState', finalState);
         }

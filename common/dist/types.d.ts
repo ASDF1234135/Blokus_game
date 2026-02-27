@@ -2,17 +2,24 @@ import { pieces } from './values.js';
 export type PlayerColor = 'red' | 'blue' | 'green' | 'yellow';
 export interface Player {
     id: string;
-    color: PlayerColor;
-    pieces: (keyof typeof pieces)[];
-    score: number;
     isReady: boolean;
     wantsToPlayAgain: boolean;
 }
+export interface ColorState {
+    color: PlayerColor;
+    playerId: string;
+    pieces: (keyof typeof pieces)[];
+    score: number;
+}
+export type GameType = '2-player' | '3-player' | '4-player';
 export interface GameState {
     board: (PlayerColor | null)[][];
     players: Player[];
+    colors: ColorState[];
     currentPlayerIndex: number;
     status: 'lobby' | 'in-progress' | 'finished';
+    gameType: GameType;
+    sharedColorPlayerIndex?: number;
 }
 export interface PlacedPiece {
     piece: keyof typeof pieces;
