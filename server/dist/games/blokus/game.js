@@ -232,3 +232,17 @@ export function resetGame(state) {
     }
     return state;
 }
+export function removePlayer(state, playerId) {
+    const newPlayers = state.players.filter(p => p.id !== playerId);
+    let newColors = state.colors;
+    if (state.status !== 'lobby') {
+        newColors = state.colors.filter(c => c.playerId !== playerId);
+        if (state.gameType === '3-player') {
+            const playerIndex = state.players.findIndex(p => p.id === playerId);
+            if (playerIndex !== -1 && state.sharedColorPlayerIndex >= playerIndex) {
+                state.sharedColorPlayerIndex = Math.max(0, state.sharedColorPlayerIndex - 1);
+            }
+        }
+    }
+    return Object.assign(Object.assign({}, state), { players: newPlayers, colors: newColors });
+}

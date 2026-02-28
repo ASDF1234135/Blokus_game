@@ -1,5 +1,5 @@
 import { pieces } from '@game1000/common';
-import { createInitialState, addPlayer, placePiece, passTurn, setPlayerReady, startGame, isGameOver, setWantsToPlayAgain, resetGame, } from './blokus/game.js';
+import { createInitialState, addPlayer, placePiece, passTurn, setPlayerReady, startGame, isGameOver, setWantsToPlayAgain, resetGame, removePlayer, } from './blokus/game.js';
 const games = new Map();
 const playerToGame = new Map();
 export class GameManager {
@@ -113,6 +113,29 @@ export class GameManager {
         console.log(`User disconnected: ${socket.id}`);
         const gameId = playerToGame.get(socket.id);
         if (gameId) {
+            const gameState = games.get(gameId);
+            if (gameState) {
+                const newGameState = removePlayer(gameState, socket.id);
+                const minPlayers = newGameState.gameType === '2-player' ? 2 : newGameState.gameType === '3-player' ? 2 : 4;
+                if (newGameState.players.length < minPlayers) {
+                    // If not enough players are left, end the game
+                    this.io.to(gameId).emit('error', 'Not enough players to continue, the game has ended.');
+                    games.delete(gameId);
+                    newGameState.players.forEach(p => playerToGame.delete(p.id));
+                }
+                else if (gameState.status === 'finished') {
+                    // If the game is over and a player leaves, reset to lobby
+                    const freshState = createInitialState(newGameState.gameType);
+                    let intermediateState = freshState;
+                    for (const player of newGameState.players) {
+                        intermediateState = addPlayer(intermediateState, player.id);
+                    }
+                    this.updateGameState(gameId, intermediateState);
+                }
+                else {
+                    this.updateGameState(gameId, newGameState);
+                }
+            }
             playerToGame.delete(socket.id);
         }
     }
