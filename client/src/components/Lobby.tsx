@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { socket } from '../socket';
 import type { GameState, GameType } from '@game1000/common/types';
+import { Modal } from './Modal';
 import './Lobby.css';
 
 interface LobbyProps {
@@ -12,14 +13,15 @@ interface LobbyProps {
 export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) => {
   const [joinGameId, setJoinGameId] = useState('');
   const [gameType, setGameType] = useState<GameType>('4-player');
+  const [showRules, setShowRules] = useState(false);
 
   const handleCreateGame = () => {
-    socket.emit('createGame', gameType);
+    socket.emit('createGame', { gameType, playerId });
   };
 
   const handleJoinGame = () => {
     if (joinGameId) {
-      socket.emit('joinGame', joinGameId);
+      socket.emit('joinGame', { gameId: joinGameId, playerId });
     }
   };
 
@@ -32,6 +34,10 @@ export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) =
 
   const handleStartGame = () => {
     socket.emit('startGame');
+  }
+
+  const handleLeaveLobby = () => {
+    socket.emit('leaveLobby');
   }
 
   if (gameIdProp && gameState) {
@@ -59,16 +65,19 @@ export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) =
               </li>
             ))}
           </ul>
-          {me && (
-            <button onClick={handlePlayerReady}>
-              {me.isReady ? 'Unready' : 'Ready'}
-            </button>
-          )}
-          {isGameCreator && (
-            <button onClick={handleStartGame} disabled={!allReady}>
-              Start Game
-            </button>
-          )}
+          <div className="lobby-buttons">
+            {me && (
+              <button onClick={handlePlayerReady}>
+                {me.isReady ? 'Unready' : 'Ready'}
+              </button>
+            )}
+            {isGameCreator && (
+              <button onClick={handleStartGame} disabled={!allReady}>
+                Start Game
+              </button>
+            )}
+            <button onClick={handleLeaveLobby} className="leave-button">Leave Game</button>
+          </div>
         </div>
       </div>
     );
@@ -76,6 +85,21 @@ export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) =
 
   return (
     <div className="lobby-container">
+        <Modal show={showRules} title="How to Play Blokus" footer={<button onClick={() => setShowRules(false)}>Close</button>}>
+            <h3>Game Rules</h3>
+            <p>The goal of Blokus is to place as many of your pieces on the board as possible.</p>
+            <h4>Placement Rules:</h4>
+            <ul>
+                <li><strong>First Piece:</strong> Your first piece must cover one of the four corners of the board.</li>
+                <li><strong>Subsequent Pieces:</strong> Each new piece you place must touch at least one of your previously played pieces, but only at the corners. Your pieces of the same color cannot touch along an edge.</li>
+                <li>There are no restrictions on how your pieces touch an opponent's pieces.</li>
+            </ul>
+            {/* Placeholder for images */}
+            <p><em>[Image of a valid first move]</em></p>
+            <p><em>[Image of a valid subsequent move]</em></p>
+            <p><em>[Image of an invalid move]</em></p>
+        </Modal>
+
       <h1>Blokus Online</h1>
       <div className="lobby-actions">
         <div>
@@ -96,6 +120,7 @@ export const Lobby = ({ gameId: gameIdProp, gameState, playerId }: LobbyProps) =
             Join Game
           </button>
         </div>
+        <button className="rules-button" onClick={() => setShowRules(true)}>How to Play?</button>
       </div>
     </div>
   );

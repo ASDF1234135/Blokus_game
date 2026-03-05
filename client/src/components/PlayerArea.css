@@ -6,8 +6,9 @@
 }
 
 .player-area.current-turn {
-  border-color: #3498db;
-  box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+  border: 3px solid #f1c40f;
+  box-shadow: 0 0 15px rgba(241, 196, 15, 0.7);
+  transform: scale(1.05);
 }
 
 .pieces-grid {
@@ -36,6 +37,22 @@
   border-radius: 4px;
 }
 
+.player-area.disconnected {
+    opacity: 0.5;
+    background-color: #f0f0f0;
+}
+
+.reconnecting-notice {
+    color: #ffffff;
+    background-color: #e67e22;
+    font-weight: bold;
+    padding: 10px;
+    border: 1px solid #d35400;
+    border-radius: 4px;
+    margin: 10px 0;
+    text-align: center;
+}
+
 .no-moves-notice {
   color: #992c12;
   background-color: #fbeae5;
@@ -46,3 +63,4 @@
   margin: 10px 0;
   text-align: center;
 }
+

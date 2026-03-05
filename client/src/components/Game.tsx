@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket';
 import { pieces } from '@game1000/common';
-import type { GameState, PlacedPiece, ColorState } from '@game1000/common/types';
+import type { GameState, PlacedPiece, ColorState, PlayerColor, Player } from '@game1000/common/types';
 import { Board } from './Board';
 import { PlayerArea } from './PlayerArea';
 import { PreviewPiece } from './PreviewPiece';
@@ -12,13 +12,17 @@ import './Board.css';
 import './PlayerArea.css';
 
 interface GameProps {
-  gameId: string;
   playerId: string;
   gameState: GameState;
 }
 
+interface SelectedPiece {
+    name: keyof typeof pieces;
+    color: PlayerColor;
+}
+
 export const Game = ({ playerId, gameState }: GameProps) => {
-  const [selectedPiece, setSelectedPiece] = useState<keyof typeof pieces | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<SelectedPiece | null>(null);
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [previewX, setPreviewX] = useState(0);
@@ -38,6 +42,32 @@ export const Game = ({ playerId, gameState }: GameProps) => {
         isMyTurn = currentColor.playerId === playerId;
     }
   }
+
+  const getPlayerForColor = (colorState: ColorState): Player | undefined => {
+    if (colorState.playerId === 'shared') {
+        if (gameState.sharedColorPlayerIndex !== undefined) {
+            return gameState.players[gameState.sharedColorPlayerIndex];
+        }
+        return undefined;
+    }
+    return gameState.players.find(p => p.id === colorState.playerId);
+  }
+
+  const getTurnPrompt = () => {
+    if (!currentColor) return '';
+
+    const colorName = currentColor.color.toUpperCase();
+    if (isMyTurn) {
+        return `Your Turn (${colorName})`;
+    }
+
+    const player = getPlayerForColor(currentColor);
+    if (player) {
+        return `${player.id}'s Turn (${colorName})`;
+    }
+    
+    return `Player's Turn (${colorName})`;
+  };
   
   useEffect(() => {
     const updateCellSize = () => {
@@ -88,7 +118,7 @@ export const Game = ({ playerId, gameState }: GameProps) => {
 
   const handlePlacePiece = (x: number, y: number) => {
     if (selectedPiece && isMyTurn && canMove) {
-      const placedPiece: PlacedPiece = { piece: selectedPiece, x, y, rotation, isFlipped };
+      const placedPiece: PlacedPiece = { piece: selectedPiece.name, x, y, rotation, isFlipped };
       socket.emit('placePiece', placedPiece);
       setSelectedPiece(null);
       setRotation(0);
@@ -121,31 +151,33 @@ export const Game = ({ playerId, gameState }: GameProps) => {
         <p>You have no available moves with your remaining pieces. You must pass your turn.</p>
       </Modal>
 
-      {selectedPiece && showPreview && <PreviewPiece pieceName={selectedPiece} rotation={rotation} isFlipped={isFlipped} mouseX={previewX} mouseY={previewY} cellSize={cellSize} />}
+      {selectedPiece && showPreview && <PreviewPiece pieceName={selectedPiece.name} color={selectedPiece.color} rotation={rotation} isFlipped={isFlipped} mouseX={previewX} mouseY={previewY} cellSize={cellSize} />}
       
       <div className="player-column-left">
-        {[gameState.colors[0], gameState.colors[2]].map((colorState: ColorState) => 
-          colorState && (
-            <PlayerArea
-              key={colorState.color}
-              colorState={colorState}
-              onPieceClick={(piece) => {
-                if (isMyTurn && canMove && colorState.color === currentColor.color) {
-                  setSelectedPiece(piece);
-                }
-              }}
-              isCurrentPlayer={colorState.color === currentColor.color}
-              canMove={canMove}
-              cellSize={cellSize}
-            />
-          )
-        )}
+        {[gameState.colors[0], gameState.colors[2]].map((colorState: ColorState) => {
+            const player = getPlayerForColor(colorState);
+            return colorState && player && (
+                <PlayerArea
+                key={colorState.color}
+                player={player}
+                colorState={colorState}
+                onPieceClick={(piece) => {
+                    if (isMyTurn && canMove && colorState.color === currentColor.color) {
+                    setSelectedPiece({ name: piece, color: colorState.color });
+                    }
+                }}
+                isCurrentPlayer={colorState.color === currentColor.color}
+                canMove={canMove}
+                cellSize={cellSize}
+                />
+            )
+        })}
       </div>
 
       <div className="board-container">
         <div className="game-info">
           <h1>Blokus</h1>
-          <h3>Current Player: <span style={{ color: currentColor.color }}>{currentColor.color.toUpperCase()}</span> ({isMyTurn ? 'You' : ''})</h3>
+          <h3>{getTurnPrompt()}</h3>
           {isMyTurn && <button onClick={handlePassTurn}>Pass Turn</button>}
           <p className="controls-hint">Press 'R' to rotate, 'F' to flip</p>
         </div>
@@ -163,22 +195,24 @@ export const Game = ({ playerId, gameState }: GameProps) => {
       </div>
 
       <div className="player-column-right">
-        {[gameState.colors[1], gameState.colors[3]].map((colorState: ColorState) => 
-          colorState && (
-            <PlayerArea
-              key={colorState.color}
-              colorState={colorState}
-              onPieceClick={(piece) => {
-                if (isMyTurn && canMove && colorState.color === currentColor.color) {
-                  setSelectedPiece(piece);
-                }
-              }}
-              isCurrentPlayer={colorState.color === currentColor.color}
-              canMove={canMove}
-              cellSize={cellSize}
-            />
-          )
-        )}
+        {[gameState.colors[1], gameState.colors[3]].map((colorState: ColorState) => {
+            const player = getPlayerForColor(colorState);
+            return colorState && player && (
+                <PlayerArea
+                key={colorState.color}
+                player={player}
+                colorState={colorState}
+                onPieceClick={(piece) => {
+                    if (isMyTurn && canMove && colorState.color === currentColor.color) {
+                    setSelectedPiece({ name: piece, color: colorState.color });
+                    }
+                }}
+                isCurrentPlayer={colorState.color === currentColor.color}
+                canMove={canMove}
+                cellSize={cellSize}
+                />
+            )
+        })}
       </div>
     </div>
   );

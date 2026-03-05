@@ -1,6 +1,24 @@
 import { pieces } from '@game1000/common';
 import type { PlayerColor, Player, GameState, PlacedPiece, Piece, ColorState, GameType } from '@game1000/common/types';
 
+function shuffle<T>(array: T[]): T[] {
+    let currentIndex = array.length,  randomIndex;
+  
+    // While there remain elements to shuffle.
+    while (currentIndex > 0) {
+  
+      // Pick a remaining element.
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+  
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
+    }
+  
+    return array;
+}
+
 function rotate(piece: Piece, rotation: 0 | 90 | 180 | 270): Piece {
     if (rotation === 0) return piece;
     let rotated = piece;
@@ -121,6 +139,7 @@ export function addPlayer(state: GameState, playerId: string): GameState {
         id: playerId,
         isReady: false,
         wantsToPlayAgain: false,
+        status: 'online',
     };
     return { ...state, players: [...state.players, newPlayer] };
 }
@@ -137,18 +156,20 @@ export function startGame(state: GameState, playerId: string): GameState {
     const minPlayers = state.gameType === '2-player' ? 2 : state.gameType === '3-player' ? 3 : 4;
     if (state.players[0]?.id !== playerId || state.players.length < minPlayers || state.players.some(p => !p.isReady)) return state;
 
+    const shuffledPlayers = shuffle(state.players);
+
     const colors: PlayerColor[] = ['blue', 'yellow', 'red', 'green'];
     let colorStates: ColorState[] = [];
 
     if (state.gameType === '4-player') {
-        colorStates = state.players.map((player, index) => ({
+        colorStates = shuffledPlayers.map((player, index) => ({
             color: colors[index],
             playerId: player.id,
             pieces: Object.keys(pieces) as (keyof typeof pieces)[],
             score: 0,
         }));
     } else if (state.gameType === '3-player') {
-        colorStates = state.players.map((player, index) => ({
+        colorStates = shuffledPlayers.map((player, index) => ({
             color: colors[index],
             playerId: player.id,
             pieces: Object.keys(pieces) as (keyof typeof pieces)[],
@@ -162,14 +183,14 @@ export function startGame(state: GameState, playerId: string): GameState {
         });
     } else if (state.gameType === '2-player') {
         colorStates = [
-            { color: 'blue', playerId: state.players[0].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
-            { color: 'yellow', playerId: state.players[1].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
-            { color: 'red', playerId: state.players[0].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
-            { color: 'green', playerId: state.players[1].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
+            { color: 'blue', playerId: shuffledPlayers[0].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
+            { color: 'yellow', playerId: shuffledPlayers[1].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
+            { color: 'red', playerId: shuffledPlayers[0].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
+            { color: 'green', playerId: shuffledPlayers[1].id, pieces: Object.keys(pieces) as (keyof typeof pieces)[], score: 0 },
         ];
     }
     
-    return { ...state, status: 'in-progress', colors: colorStates, sharedColorPlayerIndex: 0 };
+    return { ...state, status: 'in-progress', colors: colorStates, sharedColorPlayerIndex: 0, players: shuffledPlayers };
 }
 
 export function placePiece(state: GameState, playerId: string, placedPiece: PlacedPiece): GameState {

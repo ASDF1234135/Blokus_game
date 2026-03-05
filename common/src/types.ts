@@ -7,6 +7,8 @@ export interface Player {
   id: string;
   isReady: boolean;
   wantsToPlayAgain: boolean;
+  status: 'online' | 'disconnected';
+  disconnectedAt?: number;
 }
 
 // Represents the state of a color in the game

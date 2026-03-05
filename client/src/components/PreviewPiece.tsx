@@ -1,10 +1,11 @@
 import { pieces } from '@game1000/common';
-import type { Piece as PieceType } from '@game1000/common/types';
+import type { Piece as PieceType, PlayerColor } from '@game1000/common/types';
 import { Piece } from './Piece';
 import './PreviewPiece.css';
 
 interface PreviewPieceProps {
   pieceName: keyof typeof pieces;
+  color: PlayerColor;
   rotation: 0 | 90 | 180 | 270;
   isFlipped: boolean;
   mouseX: number;
@@ -14,6 +15,7 @@ interface PreviewPieceProps {
 
 export const PreviewPiece = ({
   pieceName,
+  color,
   rotation,
   isFlipped,
   mouseX,
@@ -47,8 +49,7 @@ export const PreviewPiece = ({
         top: mouseY,
       }}
     >
-      <Piece piece={finalPiece} cellSize={cellSize} />
+      <Piece piece={finalPiece} color={color} cellSize={cellSize} />
     </div>
   );
 };
-

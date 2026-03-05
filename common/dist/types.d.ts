@@ -4,6 +4,8 @@ export interface Player {
     id: string;
     isReady: boolean;
     wantsToPlayAgain: boolean;
+    status: 'online' | 'disconnected';
+    disconnectedAt?: number;
 }
 export interface ColorState {
     color: PlayerColor;

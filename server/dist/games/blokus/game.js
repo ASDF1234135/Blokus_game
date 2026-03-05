@@ -1,4 +1,18 @@
 import { pieces } from '@game1000/common';
+function shuffle(array) {
+    let currentIndex = array.length, randomIndex;
+    // While there remain elements to shuffle.
+    while (currentIndex > 0) {
+        // Pick a remaining element.
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        // And swap it with the current element.
+        [array[currentIndex], array[randomIndex]] = [
+            array[randomIndex], array[currentIndex]
+        ];
+    }
+    return array;
+}
 function rotate(piece, rotation) {
     if (rotation === 0)
         return piece;
@@ -106,6 +120,7 @@ export function addPlayer(state, playerId) {
         id: playerId,
         isReady: false,
         wantsToPlayAgain: false,
+        status: 'online',
     };
     return Object.assign(Object.assign({}, state), { players: [...state.players, newPlayer] });
 }
@@ -120,10 +135,11 @@ export function startGame(state, playerId) {
     const minPlayers = state.gameType === '2-player' ? 2 : state.gameType === '3-player' ? 3 : 4;
     if (((_a = state.players[0]) === null || _a === void 0 ? void 0 : _a.id) !== playerId || state.players.length < minPlayers || state.players.some(p => !p.isReady))
         return state;
+    const shuffledPlayers = shuffle(state.players);
     const colors = ['blue', 'yellow', 'red', 'green'];
     let colorStates = [];
     if (state.gameType === '4-player') {
-        colorStates = state.players.map((player, index) => ({
+        colorStates = shuffledPlayers.map((player, index) => ({
             color: colors[index],
             playerId: player.id,
             pieces: Object.keys(pieces),
@@ -131,7 +147,7 @@ export function startGame(state, playerId) {
         }));
     }
     else if (state.gameType === '3-player') {
-        colorStates = state.players.map((player, index) => ({
+        colorStates = shuffledPlayers.map((player, index) => ({
             color: colors[index],
             playerId: player.id,
             pieces: Object.keys(pieces),
@@ -146,13 +162,13 @@ export function startGame(state, playerId) {
     }
     else if (state.gameType === '2-player') {
         colorStates = [
-            { color: 'blue', playerId: state.players[0].id, pieces: Object.keys(pieces), score: 0 },
-            { color: 'yellow', playerId: state.players[1].id, pieces: Object.keys(pieces), score: 0 },
-            { color: 'red', playerId: state.players[0].id, pieces: Object.keys(pieces), score: 0 },
-            { color: 'green', playerId: state.players[1].id, pieces: Object.keys(pieces), score: 0 },
+            { color: 'blue', playerId: shuffledPlayers[0].id, pieces: Object.keys(pieces), score: 0 },
+            { color: 'yellow', playerId: shuffledPlayers[1].id, pieces: Object.keys(pieces), score: 0 },
+            { color: 'red', playerId: shuffledPlayers[0].id, pieces: Object.keys(pieces), score: 0 },
+            { color: 'green', playerId: shuffledPlayers[1].id, pieces: Object.keys(pieces), score: 0 },
         ];
     }
-    return Object.assign(Object.assign({}, state), { status: 'in-progress', colors: colorStates, sharedColorPlayerIndex: 0 });
+    return Object.assign(Object.assign({}, state), { status: 'in-progress', colors: colorStates, sharedColorPlayerIndex: 0, players: shuffledPlayers });
 }
 export function placePiece(state, playerId, placedPiece) {
     var _a;
